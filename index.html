@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="description"
+        content="WGshare — Manage your shared flat: inventory, bills, cleaning schedule & balances">
+    <title>WGshare — Flatmate Manager</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div id="app">
+
+        <!-- ======================== HEADER ======================== -->
+        <header class="app-header">
+            <div class="header-logo">
+                <div class="header-logo-icon">🏠</div>
+                <div class="header-logo-text">WG<span>share</span></div>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon" id="notif-btn" title="Notifications">
+                    🔔
+                    <div class="notif-badge" style="display:none"></div>
+                </button>
+            </div>
+        </header>
+
+        <!-- ======================== TOAST CONTAINER ======================== -->
+        <div class="toast-container" id="toast-container"></div>
+
+        <!-- ======================== NOTIFICATION DRAWER ======================== -->
+        <div class="notif-drawer" id="notif-drawer">
+            <div class="notif-drawer-header">
+                <span>🔔 Notifications</span>
+                <button class="btn btn-xs btn-ghost" id="clear-notifs">Clear all</button>
+            </div>
+            <div class="notif-list" id="notif-list"></div>
+        </div>
+
+        <!-- ======================== MAIN CONTENT ======================== -->
+        <main class="main-content">
+
+            <!-- ====== DASHBOARD VIEW ====== -->
+            <div id="view-dashboard" class="view">
+                <div id="dashboard-content"></div>
+            </div>
+
+            <!-- ====== INVENTORY VIEW ====== -->
+            <div id="view-inventory" class="view">
+                <div class="view-header">
+                    <div>
+                        <h2>Inventory</h2>
+                        <div class="view-subtitle">Track what you have & need</div>
+                    </div>
+                </div>
+                <div class="segmented-control">
+                    <button class="seg-btn inv-seg active" data-tab="inventory"
+                        onclick="inventory.switchTab('inventory')">📦 In Stock</button>
+                    <button class="seg-btn inv-seg" data-tab="shopping" onclick="inventory.switchTab('shopping')">🛒
+                        Shopping List</button>
+                </div>
+                <div id="inv-category-tabs" class="filter-tabs"></div>
+                <div id="inv-content"></div>
+            </div>
+
+            <!-- ====== BILLS VIEW ====== -->
+            <div id="view-bills" class="view">
+                <div class="view-header">
+                    <div>
+                        <h2>Bills</h2>
+                        <div class="view-subtitle">Split & track shared expenses</div>
+                    </div>
+                </div>
+                <div class="segmented-control">
+                    <button class="seg-btn bill-seg active" data-tab="upcoming" onclick="bills.switchTab('upcoming')">📅
+                        Upcoming</button>
+                    <button class="seg-btn bill-seg" data-tab="paid" onclick="bills.switchTab('paid')">✅ Paid</button>
+                </div>
+                <div id="bills-content"></div>
+            </div>
+
+            <!-- ====== CLEANING VIEW ====== -->
+            <div id="view-cleaning" class="view">
+                <div class="view-header">
+                    <div>
+                        <h2>Cleaning</h2>
+                        <div class="view-subtitle">Weekly schedule & trash rotation</div>
+                    </div>
+                </div>
+
+                <!-- Week navigation -->
+                <div class="week-header">
+                    <button class="btn btn-sm btn-ghost" onclick="cleaning.navigateWeek(-1)">← Prev</button>
+                    <span class="week-label" id="cleaning-week-label">This Week</span>
+                    <button class="btn btn-sm btn-ghost" onclick="cleaning.navigateWeek(1)">Next →</button>
+                </div>
+
+                <!-- Section 1: House Cleaning -->
+                <div style="padding:0 16px 8px;margin-top:4px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:18px">🏠</span>
+                        <span style="font-size:16px;font-weight:800">House Cleaning</span>
+                    </div>
+                    <div class="text-xs text-secondary" style="margin-top:2px;padding-left:26px">Rotating tasks among
+                        all flatmates</div>
+                </div>
+                <div id="house-cleaning-content"></div>
+
+                <!-- Section 2: Weekly Trash -->
+                <div style="padding:16px 16px 8px;margin-top:8px;border-top:1px solid var(--border)">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:18px">🗑️</span>
+                        <span style="font-size:16px;font-weight:800">Weekly Trash</span>
+                    </div>
+                    <div class="text-xs text-secondary" style="margin-top:2px;padding-left:26px">One person per week,
+                        auto-rotates</div>
+                </div>
+                <div id="weekly-trash-content" style="padding-bottom:8px"></div>
+
+            </div>
+
+            <!-- ====== PAYMENTS VIEW ====== -->
+            <div id="view-payments" class="view">
+                <div class="view-header">
+                    <div>
+                        <h2>Payments</h2>
+                        <div class="view-subtitle">Balances & settlements</div>
+                    </div>
+                </div>
+                <div class="segmented-control">
+                    <button class="seg-btn pay-seg active" data-tab="balances"
+                        onclick="payments.switchTab('balances')">💰 Balances</button>
+                    <button class="seg-btn pay-seg" data-tab="history" onclick="payments.switchTab('history')">📜
+                        History</button>
+                </div>
+                <div id="payments-content"></div>
+            </div>
+
+            <!-- ====== SETTINGS VIEW ====== -->
+            <div id="view-settings" class="view">
+                <div class="view-header">
+                    <div>
+                        <h2>Settings</h2>
+                        <div class="view-subtitle">Flatmates & preferences</div>
+                    </div>
+                </div>
+
+                <!-- Flatmates Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Flatmates</div>
+                    <div
+                        style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin:0 16px">
+                        <div id="flatmate-list"></div>
+                        <div style="padding:12px 16px">
+                            <button class="btn btn-primary btn-full" onclick="flatmates.openAdd()">+ Add
+                                Flatmate</button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- About Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">About</div>
+                    <div
+                        style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin:0 16px">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                            <div class="header-logo-icon" style="width:44px;height:44px;font-size:22px">🏠</div>
+                            <div>
+                                <div style="font-weight:700;font-size:16px">WGshare</div>
+                                <div class="text-sm text-secondary">Version 1.0 (MVP)</div>
+                            </div>
+                        </div>
+                        <p class="text-sm text-secondary" style="line-height:1.6">Your flatmate management app. All data
+                            is stored locally on this device.</p>
+                        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+                            <button class="btn btn-sm btn-danger"
+                                onclick="if(confirm('Reset ALL data? This cannot be undone!')){Object.keys(localStorage).filter(k=>k.startsWith('wgshare_')).forEach(k=>localStorage.removeItem(k));location.reload();}">
+                                🗑️ Reset All Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- ======================== BOTTOM NAVIGATION ======================== -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-view="dashboard">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Home</span>
+            </button>
+            <button class="nav-item" data-view="inventory">
+                <span class="nav-icon">📦</span>
+                <span class="nav-label">Inventory</span>
+            </button>
+            <button class="nav-item" data-view="bills">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Bills</span>
+            </button>
+            <button class="nav-item" data-view="cleaning">
+                <span class="nav-icon">🧹</span>
+                <span class="nav-label">Cleaning</span>
+                <span class="nav-badge" data-clean-badge style="display:none"></span>
+            </button>
+            <button class="nav-item" data-view="payments">
+                <span class="nav-icon">💰</span>
+                <span class="nav-label">Payments</span>
+            </button>
+            <button class="nav-item" data-view="settings">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Settings</span>
+            </button>
+        </nav>
+
+        <!-- ======================== FLOATING ACTION BUTTONS ======================== -->
+        <button class="fab" id="fab-inv" style="display:none" onclick="inventory.openAdd()" title="Add item">+</button>
+        <button class="fab" id="fab-bills" style="display:none" onclick="bills.openAdd()" title="Add bill">+</button>
+        <button class="fab" id="fab-pay" style="display:none" onclick="payments.openManualSettlement()"
+            title="Record settlement">
+            <span style="font-size:22px">💸</span>
+        </button>
+
+
+        <!-- ============================================================= -->
+        <!-- MODALS                                                         -->
+        <!-- ============================================================= -->
+
+        <!-- ====== FLATMATE MODAL ====== -->
+        <div class="modal-overlay" id="flatmate-modal">
+            <div class="modal-sheet">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title" id="fm-modal-title">Add Flatmate</h3>
+                <div class="modal-form">
+                    <input type="hidden" id="fm-id">
+                    <div class="form-group">
+                        <label class="form-label">Name *</label>
+                        <input type="text" id="fm-name" class="form-input" placeholder="e.g. Lena">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">IBAN (optional)</label>
+                        <input type="text" id="fm-iban" class="form-input" placeholder="e.g. DE89370400440532013000">
+                        <span class="text-xs text-secondary">Used for easy bank transfer reference</span>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary btn-full"
+                            onclick="closeModal('flatmate-modal')">Cancel</button>
+                        <button class="btn btn-primary btn-full" onclick="flatmates.saveFromForm()">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== INVENTORY MODAL ====== -->
+        <div class="modal-overlay" id="inventory-modal">
+            <div class="modal-sheet">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title" id="inv-modal-title">Add Item</h3>
+                <div class="modal-form">
+                    <input type="hidden" id="inv-id">
+                    <input type="hidden" id="inv-status" value="available">
+                    <div class="form-group">
+                        <label class="form-label">Item Name *</label>
+                        <input type="text" id="inv-name" class="form-input" placeholder="e.g. Toilet Paper">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Category</label>
+                            <select id="inv-category" class="form-select">
+                                <option value="flatstatic">🏠 Flatstatic</option>
+                                <option value="food">🍎 Food & Beverages</option>
+                                <option value="cleaning">🧴 Cleaning</option>
+                                <option value="toiletries">🪥 Toiletries</option>
+                                <option value="kitchen">🍳 Kitchen</option>
+                                <option value="other">📎 Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Unit</label>
+                            <select id="inv-unit" class="form-select">
+                                <option value="pieces">Pieces</option>
+                                <option value="rolls">Rolls</option>
+                                <option value="bottles">Bottles</option>
+                                <option value="packs">Packs</option>
+                                <option value="liters">Liters</option>
+                                <option value="kg">kg</option>
+                                <option value="bags">Bags</option>
+                                <option value="boxes">Boxes</option>
+                                <option value="cans">Cans</option>
+                                <option value="tubes">Tubes</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Current Qty</label>
+                            <input type="number" id="inv-qty" class="form-input" value="1" min="0" step="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Alert Below</label>
+                            <input type="number" id="inv-threshold" class="form-input" value="1" min="0" step="1">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notes</label>
+                        <textarea id="inv-notes" class="form-textarea" placeholder="Any notes..." rows="2"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-danger btn-sm" id="inv-delete-btn"
+                            onclick="inventory.deleteItem(document.getElementById('inv-id').value)"
+                            style="display:none">Delete</button>
+                        <div style="flex:1;display:flex;gap:10px">
+                            <button class="btn btn-secondary btn-full"
+                                onclick="closeModal('inventory-modal')">Cancel</button>
+                            <button class="btn btn-primary btn-full" onclick="inventory.saveFromForm()">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== PURCHASE MODAL ====== -->
+        <div class="modal-overlay" id="purchase-modal">
+            <div class="modal-sheet">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">Mark as Purchased</h3>
+                <div class="modal-form">
+                    <input type="hidden" id="purch-id">
+                    <div
+                        style="background:var(--bg-input);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:4px">
+                        <div class="text-sm text-secondary">Item</div>
+                        <div style="font-size:18px;font-weight:700;margin-top:2px" id="purch-item-name"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bought by</label>
+                        <select id="purch-buyer" class="form-select"></select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Qty Added</label>
+                            <input type="number" id="purch-new-qty" class="form-input" value="1" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cost (€)</label>
+                            <input type="number" id="purch-cost" class="form-input" placeholder="0.00" step="0.01"
+                                min="0">
+                        </div>
+                    </div>
+                    <div class="text-xs text-secondary" style="padding:4px 0">Cost is split equally among active
+                        flatmates and recorded in balances.</div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary btn-full"
+                            onclick="closeModal('purchase-modal')">Cancel</button>
+                        <button class="btn btn-primary btn-full" onclick="inventory.confirmPurchase()">✓ Confirm
+                            Purchase</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== BILL MODAL ====== -->
+        <div class="modal-overlay" id="bill-modal">
+            <div class="modal-sheet">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title" id="bill-modal-title">Add Bill</h3>
+                <div class="modal-form">
+                    <input type="hidden" id="bill-id">
+                    <div class="form-group">
+                        <label class="form-label">Bill Name *</label>
+                        <input type="text" id="bill-name" class="form-input"
+                            placeholder="e.g. Internet, Rundfunkbeitrag" list="bill-name-suggestions">
+                        <datalist id="bill-name-suggestions">
+                            <option value="Internet">
+                            <option value="Electricity">
+                            <option value="Gas">
+                            <option value="Water">
+                            <option value="Rundfunkbeitrag">
+                            <option value="Netflix">
+                            <option value="Spotify">
+                            <option value="Rent Supplement">
+                            <option value="Parking">
+                            <option value="Insurance">
+                        </datalist>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Total Amount (€) *</label>
+                            <input type="number" id="bill-amount" class="form-input" placeholder="0.00" step="0.01"
+                                min="0">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Due Date *</label>
+                            <input type="date" id="bill-duedate" class="form-input">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Billing Period</label>
+                        <input type="text" id="bill-period" class="form-input" placeholder="e.g. March 2026, Q1 2026">
+                    </div>
+                    <div
+                        style="background:var(--bg-input);border-radius:var(--radius-md);padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+                        <span class="text-sm text-secondary">Split per person</span>
+                        <span style="font-weight:700;color:var(--accent-green)" id="bill-split-display">—</span>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary btn-full" onclick="closeModal('bill-modal')">Cancel</button>
+                        <button class="btn btn-primary btn-full" onclick="bills.saveFromForm()">Save Bill</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== PAY BILL MODAL ====== -->
+        <div class="modal-overlay" id="pay-bill-modal">
+            <div class="modal-sheet">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">Mark Bill as Paid</h3>
+                <div class="modal-form">
+                    <input type="hidden" id="pay-bill-id">
+                    <div class="form-group">
+                        <label class="form-label">Paid by</label>
+                        <select id="pay-bill-payer" class="form-select"></select>
+                    </div>
+                    <div class="text-sm text-secondary" style="padding:4px 0">The payer's share will be deducted and
+                        others will be recorded as owing their split amount.</div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary btn-full"
+                            onclick="closeModal('pay-bill-modal')">Cancel</button>
+                        <button class="btn btn-primary btn-full" onclick="bills.confirmPayment()">✓ Confirm
+                            Payment</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== SETTLEMENT MODAL ====== -->
+        <div class="modal-overlay" id="settlement-modal">
+            <div class="modal-sheet">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">Record Settlement</h3>
+                <div class="modal-form">
+                    <input type="hidden" id="settle-from">
+                    <input type="hidden" id="settle-to">
+                    <input type="hidden" id="settle-amount">
+                    <div class="form-group">
+                        <label class="form-label">From (who paid)</label>
+                        <select id="settle-from-select" class="form-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">To (who receives)</label>
+                        <select id="settle-to-select" class="form-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Amount (€)</label>
+                        <input type="number" id="settle-amount-input" class="form-input" placeholder="0.00" step="0.01"
+                            min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Note / Reference</label>
+                        <input type="text" id="settle-note" class="form-input"
+                            placeholder="e.g. Settlement for February">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary btn-full"
+                            onclick="closeModal('settlement-modal')">Cancel</button>
+                        <button class="btn btn-primary btn-full" onclick="payments.confirmSettlement()">✓ Record
+                            Settlement</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /#app -->
+
+    <!-- Scripts (order matters) -->
+    <script src="js/data.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/flatmates.js"></script>
+    <script src="js/inventory.js"></script>
+    <script src="js/bills.js"></script>
+    <script src="js/cleaning.js"></script>
+    <script src="js/payments.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- Show delete btn in inventory modal only when editing -->
+    <script>
+        const invModal = document.getElementById('inventory-modal');
+        const deleteBtn = document.getElementById('inv-delete-btn');
+        new MutationObserver(() => {
+            const isEditing = !!document.getElementById('inv-id')?.value;
+            if (deleteBtn) deleteBtn.style.display = isEditing ? 'flex' : 'none';
+        }).observe(invModal, { attributes: true, attributeFilter: ['class'] });
+    </script>
+</body>
+
+</html>
