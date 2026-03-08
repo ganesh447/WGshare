@@ -8,6 +8,25 @@ const app = {
   currentView: 'dashboard',
 
   init() {
+    this.showSplash(() => {
+      // Backward compat: if old seeded data exists but no currentUser/flat, auto-populate
+      if (data.get(data.keys.settings) && !data.get(data.keys.currentUser)) {
+        const first = (data.get(data.keys.flatmates) || []).find(f => f.active);
+        if (first) data.set(data.keys.currentUser, { id: first.id, name: first.name, color: first.color });
+      }
+      if (data.get(data.keys.settings) && !data.get(data.keys.flat)) {
+        data.set(data.keys.flat, { name: 'My Flat', code: 'LEGACY', createdAt: new Date().toISOString() });
+      }
+
+      if (!data.isOnboarded()) {
+        this.showOnboarding();
+      } else {
+        this.startApp();
+      }
+    });
+  },
+
+  startApp() {
     data.seed();
     cleaning.init();
 
@@ -19,10 +38,93 @@ const app = {
       if (!exists) notifications.add('bill_overdue', `"${b.name}" bill is overdue (due ${data.formatDate(b.dueDate)})`);
     });
 
+    document.getElementById('app').style.display = 'flex';
     notifications.updateBadge();
     this.navigate('dashboard');
     this.bindNav();
     this.bindGlobalEvents();
+  },
+
+  showSplash(onDone) {
+    const el = document.getElementById('splash-screen');
+    el.style.display = 'flex';
+    setTimeout(() => {
+      el.classList.add('splash-exit');
+      el.addEventListener('animationend', () => {
+        el.style.display = 'none';
+        onDone();
+      }, { once: true });
+    }, 1400);
+  },
+
+  showOnboarding() {
+    const screen = document.getElementById('onboarding-screen');
+    screen.style.display = 'flex';
+
+    const goToStep = (stepId) => {
+      document.querySelectorAll('.onboard-step').forEach(s => s.classList.remove('active'));
+      document.getElementById(stepId).classList.add('active');
+    };
+
+    document.getElementById('btn-create-flat').onclick = () => goToStep('onboard-step-create');
+    document.getElementById('btn-join-flat').onclick   = () => goToStep('onboard-step-join');
+
+    document.querySelectorAll('.onboard-back').forEach(btn => {
+      btn.onclick = () => goToStep('onboard-step-choose');
+    });
+
+    document.getElementById('btn-confirm-create').onclick = () => {
+      const name     = document.getElementById('onboard-name').value.trim();
+      const flatName = document.getElementById('onboard-flat-name').value.trim();
+      if (!name)     { toast('Please enter your name', 'error'); return; }
+      if (!flatName) { toast('Please enter a flat name', 'error'); return; }
+
+      const code = Math.random().toString(36).substr(2, 6).toUpperCase();
+      data.set(data.keys.flat, { name: flatName, code, createdAt: new Date().toISOString() });
+
+      const fmId = data.generateId();
+      const flatmates = data.get(data.keys.flatmates) || [];
+      flatmates.push({ id: fmId, name, iban: '', active: true, color: 0, joinedAt: new Date().toISOString() });
+      data.set(data.keys.flatmates, flatmates);
+      data.set(data.keys.currentUser, { id: fmId, name, color: 0 });
+
+      document.getElementById('generated-code').textContent = code;
+      goToStep('onboard-step-code');
+    };
+
+    document.getElementById('btn-confirm-join').onclick = () => {
+      const name = document.getElementById('onboard-join-name').value.trim();
+      const code = document.getElementById('onboard-code').value.trim().toUpperCase();
+      if (!name) { toast('Please enter your name', 'error'); return; }
+      if (!code) { toast('Please enter an invite code', 'error'); return; }
+
+      const flat = data.get(data.keys.flat);
+      if (!flat || flat.code !== code) {
+        toast('Code not found — ask your flatmate to share their device first', 'error');
+        return;
+      }
+
+      const fmId = data.generateId();
+      const existing = (data.get(data.keys.flatmates) || []);
+      const colorIdx = existing.length % 6;
+      existing.push({ id: fmId, name, iban: '', active: true, color: colorIdx, joinedAt: new Date().toISOString() });
+      data.set(data.keys.flatmates, existing);
+      data.set(data.keys.currentUser, { id: fmId, name, color: colorIdx });
+
+      screen.style.display = 'none';
+      this.startApp();
+    };
+
+    document.getElementById('btn-copy-code').onclick = () => {
+      const code = document.getElementById('generated-code').textContent;
+      navigator.clipboard?.writeText(code).catch(() => {});
+      toast(`Code ${code} copied!`, 'success');
+    };
+
+    document.getElementById('btn-enter-app').onclick = () => {
+      screen.style.display = 'none';
+      this.startApp();
+    };
   },
 
   navigate(view) {
@@ -38,10 +140,8 @@ const app = {
     // Update FAB visibility
     const fab = document.getElementById('fab-inv');
     const fabBills = document.getElementById('fab-bills');
-    const fabPay = document.getElementById('fab-pay');
     if (fab) fab.style.display = view === 'inventory' ? 'flex' : 'none';
     if (fabBills) fabBills.style.display = view === 'bills' ? 'flex' : 'none';
-    if (fabPay) fabPay.style.display = view === 'payments' ? 'flex' : 'none';
 
     // Render each view
     switch (view) {
@@ -50,7 +150,7 @@ const app = {
       case 'bills': bills.render(); break;
       case 'cleaning': cleaning.render(); break;
       case 'payments': payments.render(); break;
-      case 'settings': flatmates.renderList(); cleaning.renderTaskSettings(); break;
+      case 'settings': this.renderSettings(); break;
     }
 
     // Update cleaning badge
@@ -72,11 +172,13 @@ const app = {
 
     const todayName = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
     const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const currentUser = data.get(data.keys.currentUser);
+    const userName = currentUser?.name || 'Flatmates';
 
     document.getElementById('dashboard-content').innerHTML = `
       <div class="dashboard-hero">
         <div class="hero-greeting">🏠 ${todayName}</div>
-        <div class="hero-title">Hello, Flatmates!</div>
+        <div class="hero-title">Hello, ${userName}!</div>
         <div class="hero-subtitle">${dateStr}</div>
         <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
           ${overdueBills > 0 ? `<div class="badge badge-red">⚠️ ${overdueBills} overdue bill${overdueBills > 1 ? 's' : ''}</div>` : ''}
@@ -87,43 +189,25 @@ const app = {
       </div>
 
       <div class="stats-grid">
-        <div class="stat-card" onclick="app.navigate('inventory')" style="cursor:pointer">
-          <div class="stat-icon">📦</div>
+        <div class="stat-card animate-item" onclick="app.navigate('inventory')" style="cursor:pointer">
+          <div class="stat-icon" style="background:${depleted > 0 ? 'var(--accent-amber-dim)' : 'var(--accent-green-dim)'}">📦</div>
           <div class="stat-value" style="color:${depleted > 0 ? 'var(--accent-amber)' : 'var(--accent-green)'}">${depleted}</div>
           <div class="stat-label">Items Needed</div>
         </div>
-        <div class="stat-card" onclick="app.navigate('bills')" style="cursor:pointer">
-          <div class="stat-icon">📋</div>
+        <div class="stat-card animate-item" onclick="app.navigate('bills')" style="cursor:pointer">
+          <div class="stat-icon" style="background:${overdueBills > 0 ? 'var(--accent-red-dim)' : 'rgba(59,130,246,0.12)'}">📋</div>
           <div class="stat-value" style="color:${overdueBills > 0 ? 'var(--accent-red)' : 'var(--text-primary)'}">${upcomingBills + overdueBills}</div>
           <div class="stat-label">Upcoming Bills</div>
         </div>
-        <div class="stat-card" onclick="app.navigate('cleaning')" style="cursor:pointer">
-          <div class="stat-icon">🧹</div>
+        <div class="stat-card animate-item" onclick="app.navigate('cleaning')" style="cursor:pointer">
+          <div class="stat-icon" style="background:${pendingTasks > 0 ? 'rgba(167,139,250,0.12)' : 'var(--accent-green-dim)'}">🧹</div>
           <div class="stat-value" style="color:${pendingTasks > 0 ? 'var(--accent-purple)' : 'var(--accent-green)'}">${pendingTasks}</div>
           <div class="stat-label">Chores Pending</div>
         </div>
-        <div class="stat-card" onclick="app.navigate('payments')" style="cursor:pointer">
-          <div class="stat-icon">💰</div>
+        <div class="stat-card animate-item" onclick="app.navigate('payments')" style="cursor:pointer">
+          <div class="stat-icon" style="background:${myBalance > 0 ? 'var(--accent-amber-dim)' : 'var(--accent-green-dim)'}">💰</div>
           <div class="stat-value" style="color:${myBalance > 0 ? 'var(--accent-amber)' : 'var(--accent-green)'}">€${myBalance.toFixed(0)}</div>
           <div class="stat-label">Outstanding</div>
-        </div>
-      </div>
-
-      <div class="quick-actions">
-        <h3>Quick Actions</h3>
-        <div class="qa-grid">
-          <div class="qa-btn" onclick="inventory.switchTab('shopping');app.navigate('inventory')">
-            <div class="qa-icon">🛒</div><div class="qa-label">Shopping</div>
-          </div>
-          <div class="qa-btn" onclick="bills.openAdd();app.navigate('bills')">
-            <div class="qa-icon">🧾</div><div class="qa-label">Add Bill</div>
-          </div>
-          <div class="qa-btn" onclick="app.navigate('cleaning')">
-            <div class="qa-icon">🧹</div><div class="qa-label">Chores</div>
-          </div>
-          <div class="qa-btn" onclick="payments.openManualSettlement();app.navigate('payments')">
-            <div class="qa-icon">💸</div><div class="qa-label">Settle Up</div>
-          </div>
         </div>
       </div>
 
@@ -141,6 +225,22 @@ const app = {
           </div>
         </div>
       </div>`;
+  },
+
+  renderSettings() {
+    const flat = data.get(data.keys.flat);
+    const nameEl = document.getElementById('settings-flat-name');
+    const codeEl = document.getElementById('settings-flat-code');
+    if (nameEl) nameEl.textContent = flat?.name || '—';
+    if (codeEl) codeEl.textContent = flat?.code ? `Invite code: ${flat.code}` : '';
+    flatmates.renderList();
+  },
+
+  logOut() {
+    if (confirm('Log out? Your flat data stays on this device.')) {
+      localStorage.removeItem(data.keys.currentUser);
+      location.reload();
+    }
   },
 
   refreshDashboard() {

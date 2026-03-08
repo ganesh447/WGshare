@@ -12,6 +12,9 @@ const KEYS = {
     transactions: 'wgshare_transactions',
     notifications: 'wgshare_notifications',
     settings: 'wgshare_settings',
+    currentUser: 'wgshare_currentUser',     // { id, name, color }
+    flat: 'wgshare_flat',                   // { name, code, createdAt, trashTypeAnchor? }
+    trashDone: 'wgshare_trash_done',        // { [weekStart]: { done: bool, doneAt: string } }
 };
 
 const data = {
@@ -86,6 +89,10 @@ const data = {
 
     formatCurrency(amount) {
         return '€' + parseFloat(amount || 0).toFixed(2);
+    },
+
+    isOnboarded() {
+        return !!(data.get(KEYS.currentUser) && data.get(KEYS.flat));
     },
 
     // Seed initial data if localStorage is empty

@@ -61,7 +61,7 @@ const bills = {
         const splitAmount = this.calculateSplit(bill.amount);
 
         return `
-      <div class="bill-card ${isOverdue ? 'overdue' : ''} ${isPaid ? 'paid' : ''}">
+      <div class="bill-card animate-item ${isOverdue ? 'overdue' : ''} ${isPaid ? 'paid' : ''}">
         <div class="bill-card-header">
           <div>
             <div class="bill-name">${bill.name}</div>

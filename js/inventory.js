@@ -4,8 +4,7 @@
 
 const CATEGORIES = [
     { key: 'all', label: 'All', icon: '📦' },
-    { key: 'flatstatic', label: 'Flatstatic', icon: '🏠' },
-    { key: 'food', label: 'Food & Beverages', icon: '🍎' },
+    { key: 'food', label: 'Food', icon: '🍎' },
     { key: 'cleaning', label: 'Cleaning', icon: '🧴' },
     { key: 'toiletries', label: 'Toiletries', icon: '🪥' },
     { key: 'kitchen', label: 'Kitchen', icon: '🍳' },
@@ -17,13 +16,13 @@ const UNITS = ['pieces', 'rolls', 'bottles', 'packs', 'liters', 'kg', 'bags', 'b
 const inventory = {
     currentTab: 'inventory',  // 'inventory' | 'shopping'
     currentCategory: 'all',
+    currentStatusFilter: 'instock',  // 'instock' | 'depleted'
 
     getAll() { return data.get(data.keys.inventory) || []; },
 
     computeStatus(item) {
         if (item.status === 'needed') return 'needed';
         if (item.quantity <= 0) return 'depleted';
-        if (item.quantity <= item.minThreshold) return 'low';
         return 'available';
     },
 
@@ -54,27 +53,42 @@ const inventory = {
         else this.renderShoppingList();
     },
 
+    setStatusFilter(f) {
+        this.currentStatusFilter = f;
+        this.renderInventory();
+    },
+
     renderInventory() {
         const el = document.getElementById('inv-content');
         let items = this.getInventory();
         if (this.currentCategory !== 'all') items = items.filter(i => i.category === this.currentCategory);
 
+        const f = this.currentStatusFilter;
+        const filterPills = `
+          <div class="filter-tabs" style="padding-bottom:8px">
+            <button class="filter-tab ${f === 'instock' ? 'active' : ''}" onclick="inventory.setStatusFilter('instock')">In Stock</button>
+            <button class="filter-tab ${f === 'depleted' ? 'active' : ''}" onclick="inventory.setStatusFilter('depleted')">Depleted</button>
+          </div>`;
+
+        if (f === 'instock') items = items.filter(i => i.status === 'available');
+        else if (f === 'depleted') items = items.filter(i => i.status === 'depleted');
+
         if (items.length === 0) {
-            el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📦</div><h3>No items here</h3><p>Add your first inventory item with the + button</p></div>`;
+            el.innerHTML = filterPills + `<div class="empty-state"><div class="empty-state-icon">📦</div><h3>No items here</h3><p>${f === 'depleted' ? 'No depleted items' : f === 'instock' ? 'No items in stock' : 'Add your first inventory item with the + button'}</p></div>`;
             return;
         }
 
-        el.innerHTML = `<div class="inventory-grid">${items.map(i => this.inventoryCardHtml(i)).join('')}</div>`;
+        el.innerHTML = filterPills + `<div class="inventory-grid">${items.map(i => this.inventoryCardHtml(i)).join('')}</div>`;
     },
 
     inventoryCardHtml(item) {
         const pct = item.minThreshold > 0 ? Math.min(100, (item.quantity / (item.minThreshold * 3)) * 100) : 50;
-        const fillClass = item.status === 'depleted' ? 'empty' : item.status === 'low' ? 'low' : '';
-        const qtyClass = item.status === 'depleted' ? 'zero-qty' : item.status === 'low' ? 'low-qty' : '';
-        const cardClass = item.status === 'depleted' ? 'depleted' : item.status === 'low' ? 'low-stock' : '';
+        const fillClass = item.status === 'depleted' ? 'empty' : '';
+        const qtyClass = item.status === 'depleted' ? 'zero-qty' : '';
+        const cardClass = item.status === 'depleted' ? 'depleted' : '';
         const catIcon = CATEGORIES.find(c => c.key === item.category)?.icon || '📦';
         return `
-      <div class="inventory-card ${cardClass}" onclick="inventory.openEdit('${item.id}')">
+      <div class="inventory-card animate-item ${cardClass}" onclick="inventory.openEdit('${item.id}')">
         <div class="inv-card-header">
           <div>
             <div class="inv-card-name">${item.name}</div>
@@ -85,9 +99,8 @@ const inventory = {
             <div class="inv-card-unit">${item.unit}</div>
           </div>
         </div>
-        <div class="progress-bar"><div class="progress-fill ${fillClass}" style="width:${pct}%"></div></div>
+        <div class="progress-bar"><div class="progress-fill ${fillClass}" style="--target-w:${pct}%"></div></div>
         ${item.status === 'depleted' ? '<div class="badge badge-red" style="margin-top:4px">Depleted</div>' :
-                item.status === 'low' ? '<div class="badge badge-amber" style="margin-top:4px">Low</div>' :
                     '<div class="badge badge-green" style="margin-top:4px">In Stock</div>'}
       </div>`;
     },
@@ -106,7 +119,7 @@ const inventory = {
         const catIcon = CATEGORIES.find(c => c.key === item.category)?.icon || '📦';
         const assignee = item.assignedTo ? flatmates.getById(item.assignedTo) : null;
         return `
-      <div class="shopping-item">
+      <div class="shopping-item animate-item">
         <div style="font-size:24px">${catIcon}</div>
         <div class="shopping-item-info">
           <div class="shopping-item-name">${item.name}</div>
@@ -126,8 +139,10 @@ const inventory = {
         const container = document.getElementById('inv-category-tabs');
         if (!container) return;
         container.innerHTML = CATEGORIES.map(c => `
-      <button class="filter-tab ${this.currentCategory === c.key ? 'active' : ''}"
-        onclick="inventory.setCategory('${c.key}')">${c.icon} ${c.label}</button>`).join('');
+          <button class="cat-pill ${this.currentCategory === c.key ? 'active' : ''}" onclick="inventory.setCategory('${c.key}')">
+            <div class="cat-pill-icon">${c.icon}</div>
+            <div class="cat-pill-label">${c.label}</div>
+          </button>`).join('');
     },
 
     setCategory(cat) {
