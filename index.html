@@ -11,12 +11,117 @@
 </head>
 
 <body>
-    <div id="app">
+
+    <!-- ======================== SPLASH SCREEN ======================== -->
+    <div id="splash-screen">
+        <div class="splash-logo">
+            <div class="splash-icon">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div class="splash-wordmark">WG<span>share</span></div>
+            <div class="splash-tagline">Your flatshare, organised</div>
+        </div>
+    </div>
+
+    <!-- ======================== ONBOARDING SCREEN ======================== -->
+    <div id="onboarding-screen" style="display:none">
+
+        <!-- Step 1: Choose -->
+        <div id="onboard-step-choose" class="onboard-step active">
+            <div class="onboard-hero">
+                <div class="splash-icon" style="width:64px;height:64px;margin-bottom:20px">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </div>
+                <div class="splash-wordmark" style="font-size:28px">WG<span>share</span></div>
+                <div class="splash-tagline">Let's get your flat set up</div>
+            </div>
+            <div class="onboard-cards">
+                <div class="onboard-card" id="btn-create-flat">
+                    <div class="onboard-card-icon">🏠</div>
+                    <div class="onboard-card-body">
+                        <div class="onboard-card-title">Create a Flat</div>
+                        <div class="onboard-card-desc">Start fresh and invite your flatmates</div>
+                    </div>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+                <div class="onboard-card" id="btn-join-flat">
+                    <div class="onboard-card-icon">🔑</div>
+                    <div class="onboard-card-body">
+                        <div class="onboard-card-title">Join a Flat</div>
+                        <div class="onboard-card-desc">Enter your invite code to join</div>
+                    </div>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-tertiary);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2a: Create Flat -->
+        <div id="onboard-step-create" class="onboard-step">
+            <button class="onboard-back">← Back</button>
+            <div style="margin-bottom:28px">
+                <h2 style="font-size:26px;letter-spacing:-0.5px">Create your flat</h2>
+                <p class="text-sm text-secondary" style="margin-top:6px">You'll get an invite code to share with flatmates</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+                <div class="form-group">
+                    <label class="form-label">Your Name</label>
+                    <input type="text" id="onboard-name" class="form-input" placeholder="e.g. Lena">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Flat Name</label>
+                    <input type="text" id="onboard-flat-name" class="form-input" placeholder="e.g. Schillerstraße WG">
+                </div>
+                <button class="btn btn-primary btn-full" id="btn-confirm-create" style="margin-top:8px">Create Flat →</button>
+            </div>
+        </div>
+
+        <!-- Step 2b: Join Flat -->
+        <div id="onboard-step-join" class="onboard-step">
+            <button class="onboard-back">← Back</button>
+            <div style="margin-bottom:28px">
+                <h2 style="font-size:26px;letter-spacing:-0.5px">Join a flat</h2>
+                <p class="text-sm text-secondary" style="margin-top:6px">Ask your flatmate for the 6-character invite code</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+                <div class="form-group">
+                    <label class="form-label">Your Name</label>
+                    <input type="text" id="onboard-join-name" class="form-input" placeholder="e.g. Marco">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Invite Code</label>
+                    <input type="text" id="onboard-code" class="form-input onboard-code-input" placeholder="K4X9MR" maxlength="6">
+                </div>
+                <button class="btn btn-primary btn-full" id="btn-confirm-join" style="margin-top:8px">Join Flat →</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Code reveal (after create) -->
+        <div id="onboard-step-code" class="onboard-step">
+            <div class="onboard-code-display">
+                <div class="onboard-code-icon">🎉</div>
+                <h2 style="font-size:22px;letter-spacing:-0.3px;text-align:center;margin-bottom:6px">Flat created!</h2>
+                <p class="text-sm text-secondary" style="text-align:center;margin-bottom:28px">Share this code with your flatmates so they can join</p>
+                <div class="onboard-code-card">
+                    <div class="text-xs text-secondary" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:0.6px">Invite Code</div>
+                    <div id="generated-code" class="onboard-big-code">——————</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px;width:100%;margin-top:20px">
+                    <button class="btn btn-secondary btn-full" id="btn-copy-code">📋 Copy Code</button>
+                    <button class="btn btn-primary btn-full" id="btn-enter-app">Enter App →</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="app" style="display:none">
 
         <!-- ======================== HEADER ======================== -->
         <header class="app-header">
             <div class="header-logo">
-                <div class="header-logo-icon">🏠</div>
+                <div class="header-logo-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </div>
                 <div class="header-logo-text">WG<span>share</span></div>
             </div>
             <div class="header-actions">
@@ -98,13 +203,15 @@
                 </div>
 
                 <!-- Section 1: House Cleaning -->
-                <div style="padding:0 16px 8px;margin-top:4px">
-                    <div style="display:flex;align-items:center;gap:8px">
-                        <span style="font-size:18px">🏠</span>
-                        <span style="font-size:16px;font-weight:800">House Cleaning</span>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 16px 8px">
+                    <div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <span style="font-size:18px">🏠</span>
+                            <span style="font-size:16px;font-weight:800">House Cleaning</span>
+                        </div>
+                        <div class="text-xs text-secondary" style="margin-top:2px;padding-left:26px">Rotating tasks among all flatmates</div>
                     </div>
-                    <div class="text-xs text-secondary" style="margin-top:2px;padding-left:26px">Rotating tasks among
-                        all flatmates</div>
+                    <button class="btn-icon" onclick="cleaning.openTaskLabels()" title="Manage tasks" style="width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;color:var(--text-secondary);flex-shrink:0">+</button>
                 </div>
                 <div id="house-cleaning-content"></div>
 
@@ -129,59 +236,39 @@
                         <div class="view-subtitle">Balances & settlements</div>
                     </div>
                 </div>
-                <div class="segmented-control">
-                    <button class="seg-btn pay-seg active" data-tab="balances"
-                        onclick="payments.switchTab('balances')">💰 Balances</button>
-                    <button class="seg-btn pay-seg" data-tab="history" onclick="payments.switchTab('history')">📜
-                        History</button>
-                </div>
                 <div id="payments-content"></div>
             </div>
 
             <!-- ====== SETTINGS VIEW ====== -->
             <div id="view-settings" class="view">
                 <div class="view-header">
-                    <div>
-                        <h2>Settings</h2>
-                        <div class="view-subtitle">Flatmates & preferences</div>
+                    <div><h2>Settings</h2></div>
+                </div>
+
+                <!-- Flat info -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Your Flat</div>
+                    <div class="card" style="margin:0 16px">
+                        <div style="font-weight:700;font-size:16px" id="settings-flat-name">—</div>
+                        <div class="text-sm text-secondary" id="settings-flat-code" style="margin-top:4px;font-family:monospace"></div>
                     </div>
                 </div>
 
-                <!-- Flatmates Section -->
+                <!-- Flatmates -->
                 <div class="settings-section">
                     <div class="settings-section-title">Flatmates</div>
-                    <div
-                        style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin:0 16px">
+                    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin:0 16px">
                         <div id="flatmate-list"></div>
                         <div style="padding:12px 16px">
-                            <button class="btn btn-primary btn-full" onclick="flatmates.openAdd()">+ Add
-                                Flatmate</button>
+                            <button class="btn btn-primary btn-full" onclick="flatmates.openAdd()">+ Add Flatmate</button>
                         </div>
                     </div>
                 </div>
 
-
-                <!-- About Section -->
-                <div class="settings-section">
-                    <div class="settings-section-title">About</div>
-                    <div
-                        style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin:0 16px">
-                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-                            <div class="header-logo-icon" style="width:44px;height:44px;font-size:22px">🏠</div>
-                            <div>
-                                <div style="font-weight:700;font-size:16px">WGshare</div>
-                                <div class="text-sm text-secondary">Version 1.0 (MVP)</div>
-                            </div>
-                        </div>
-                        <p class="text-sm text-secondary" style="line-height:1.6">Your flatmate management app. All data
-                            is stored locally on this device.</p>
-                        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
-                            <button class="btn btn-sm btn-danger"
-                                onclick="if(confirm('Reset ALL data? This cannot be undone!')){Object.keys(localStorage).filter(k=>k.startsWith('wgshare_')).forEach(k=>localStorage.removeItem(k));location.reload();}">
-                                🗑️ Reset All Data
-                            </button>
-                        </div>
-                    </div>
+                <!-- Log out -->
+                <div style="padding:0 16px 24px">
+                    <button class="btn btn-danger btn-full" onclick="app.logOut()">Log Out</button>
+                    <p class="text-xs text-secondary" style="margin-top:8px;text-align:center">Clears your session. Flat data stays.</p>
                 </div>
             </div>
 
@@ -190,28 +277,28 @@
         <!-- ======================== BOTTOM NAVIGATION ======================== -->
         <nav class="bottom-nav">
             <button class="nav-item active" data-view="dashboard">
-                <span class="nav-icon">🏠</span>
+                <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 <span class="nav-label">Home</span>
             </button>
             <button class="nav-item" data-view="inventory">
-                <span class="nav-icon">📦</span>
+                <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
                 <span class="nav-label">Inventory</span>
             </button>
             <button class="nav-item" data-view="bills">
-                <span class="nav-icon">📋</span>
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                 <span class="nav-label">Bills</span>
             </button>
             <button class="nav-item" data-view="cleaning">
-                <span class="nav-icon">🧹</span>
+                <svg viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M14.5 2.5C14.5 2.5 12 5 12 8c0 2.5 2 4 2 4"/><path d="M10.5 8.5C10.5 8.5 8 10 8 13c0 3 4 7 4 7s4-4 4-7"/><path d="M12 20v1"/></svg>
                 <span class="nav-label">Cleaning</span>
                 <span class="nav-badge" data-clean-badge style="display:none"></span>
             </button>
             <button class="nav-item" data-view="payments">
-                <span class="nav-icon">💰</span>
+                <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                 <span class="nav-label">Payments</span>
             </button>
             <button class="nav-item" data-view="settings">
-                <span class="nav-icon">⚙️</span>
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 <span class="nav-label">Settings</span>
             </button>
         </nav>
@@ -219,10 +306,6 @@
         <!-- ======================== FLOATING ACTION BUTTONS ======================== -->
         <button class="fab" id="fab-inv" style="display:none" onclick="inventory.openAdd()" title="Add item">+</button>
         <button class="fab" id="fab-bills" style="display:none" onclick="bills.openAdd()" title="Add bill">+</button>
-        <button class="fab" id="fab-pay" style="display:none" onclick="payments.openManualSettlement()"
-            title="Record settlement">
-            <span style="font-size:22px">💸</span>
-        </button>
 
 
         <!-- ============================================================= -->
@@ -270,7 +353,6 @@
                         <div class="form-group">
                             <label class="form-label">Category</label>
                             <select id="inv-category" class="form-select">
-                                <option value="flatstatic">🏠 Flatstatic</option>
                                 <option value="food">🍎 Food & Beverages</option>
                                 <option value="cleaning">🧴 Cleaning</option>
                                 <option value="toiletries">🪥 Toiletries</option>
@@ -436,39 +518,35 @@
             </div>
         </div>
 
-        <!-- ====== SETTLEMENT MODAL ====== -->
-        <div class="modal-overlay" id="settlement-modal">
+
+        <!-- ====== PERSON BREAKDOWN MODAL ====== -->
+        <div class="modal-overlay" id="person-breakdown-modal">
             <div class="modal-sheet">
                 <div class="modal-handle"></div>
-                <h3 class="modal-title">Record Settlement</h3>
+                <h3 class="modal-title" id="breakdown-modal-title">Breakdown</h3>
+                <div class="modal-form" id="breakdown-modal-content" style="padding-top:0"></div>
+                <div style="padding:0 16px 8px">
+                    <button class="btn btn-secondary btn-full" onclick="closeModal('person-breakdown-modal')">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====== TASK LABELS MODAL ====== -->
+        <div class="modal-overlay" id="task-labels-modal">
+            <div class="modal-sheet">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title">Manage Tasks</h3>
                 <div class="modal-form">
-                    <input type="hidden" id="settle-from">
-                    <input type="hidden" id="settle-to">
-                    <input type="hidden" id="settle-amount">
+                    <div id="task-labels-list" style="margin-bottom:16px"></div>
                     <div class="form-group">
-                        <label class="form-label">From (who paid)</label>
-                        <select id="settle-from-select" class="form-select"></select>
+                        <label class="form-label">Add New Task</label>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <div id="task-icon-picker" onclick="cleaning.cycleIcon()" title="Click to change icon" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg-elevated);flex-shrink:0">🧹</div>
+                            <input id="new-task-label" class="form-input" placeholder="Task label…" style="flex:1" onkeydown="if(event.key==='Enter')cleaning.addHouseTask()">
+                            <button class="btn btn-sm btn-primary" onclick="cleaning.addHouseTask()">Add</button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">To (who receives)</label>
-                        <select id="settle-to-select" class="form-select"></select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Amount (€)</label>
-                        <input type="number" id="settle-amount-input" class="form-input" placeholder="0.00" step="0.01"
-                            min="0">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Note / Reference</label>
-                        <input type="text" id="settle-note" class="form-input"
-                            placeholder="e.g. Settlement for February">
-                    </div>
-                    <div class="modal-actions">
-                        <button class="btn btn-secondary btn-full"
-                            onclick="closeModal('settlement-modal')">Cancel</button>
-                        <button class="btn btn-primary btn-full" onclick="payments.confirmSettlement()">✓ Record
-                            Settlement</button>
-                    </div>
+                    <button class="btn btn-secondary btn-full" style="margin-top:8px" onclick="closeModal('task-labels-modal')">Done</button>
                 </div>
             </div>
         </div>
