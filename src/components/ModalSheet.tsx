@@ -17,8 +17,8 @@ export default function ModalSheet({ open, onClose, title, children }: ModalProp
       onClick={onClose}
     >
       <div
-        className="glass-card border-t border-x rounded-t-[28px] w-full max-w-[430px] max-h-[90vh] overflow-y-auto px-5 pb-9 pt-2 animate-slide-up"
-        style={{ borderBottom: 'none' }}
+        className="glass-card border-t border-x rounded-t-[28px] w-full max-w-[430px] overflow-y-auto px-5 pb-[100px] pt-4 animate-slide-up flex flex-col"
+        style={{ borderBottom: 'none', maxHeight: '90dvh' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="w-9 h-1 bg-muted-foreground/20 rounded-full mx-auto mt-3 mb-5" />
