@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { data, CATEGORIES, UNITS, type InventoryItem } from '@/lib/data';
 import ModalSheet from '@/components/ModalSheet';
+import { createPortal } from 'react-dom';
 
 export default function InventoryView() {
   const { inventory, flatmates, currentUser, updateData, toast, refresh } = useApp();
@@ -164,9 +165,8 @@ export default function InventoryView() {
           <div className="flex gap-2 px-4 pb-3 overflow-x-auto no-scrollbar">
             {CATEGORIES.map(c => (
               <button key={c.key} onClick={() => setCategory(c.key)}
-                className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[12px] font-bold transition-all border ${
-                  category === c.key ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border bg-card text-muted-foreground'
-                }`}>
+                className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[12px] font-bold transition-all border ${category === c.key ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border bg-card text-muted-foreground'
+                  }`}>
                 <span className="text-lg">{c.icon}</span>
                 <span>{c.label}</span>
               </button>
@@ -227,9 +227,8 @@ export default function InventoryView() {
                   <div className={`h-full rounded-full transition-all ${item.status === 'depleted' ? 'bg-destructive' : 'bg-primary'}`}
                     style={{ width: `${pct}%`, animation: 'growBar 0.7s ease both' }} />
                 </div>
-                <span className={`mt-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase ${
-                  item.status === 'depleted' ? 'bg-destructive/10 text-destructive' : 'bg-accent/10 text-accent'
-                }`}>{item.status === 'depleted' ? 'Depleted' : 'In Stock'}</span>
+                <span className={`mt-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase ${item.status === 'depleted' ? 'bg-destructive/10 text-destructive' : 'bg-accent/10 text-accent'
+                  }`}>{item.status === 'depleted' ? 'Depleted' : 'In Stock'}</span>
               </button>
             );
           })}
@@ -237,9 +236,12 @@ export default function InventoryView() {
       )}
 
       {/* FAB */}
-      {tab === 'shopping' && (
-        <button onClick={openAdd} className="fixed bottom-[100px] right-6 w-12 h-12 rounded-full text-2xl font-light border-none flex items-center justify-center z-40 transition-all shadow-lg hover:scale-110"
-          style={{ background: 'var(--gradient-primary)', color: 'hsl(var(--primary-foreground))' }}>+</button>
+      {tab === 'shopping' && createPortal(
+        <div className="fixed bottom-[85px] left-1/2 -translate-x-1/2 w-full max-w-[430px] flex justify-end px-5 pointer-events-none z-[100]">
+          <button onClick={openAdd} className="w-14 h-14 rounded-full text-3xl font-light border-none flex items-center justify-center transition-all hover:scale-110 pointer-events-auto"
+            style={{ background: 'var(--gradient-primary)', color: 'hsl(var(--primary-foreground))', animation: 'fabPulse 3s ease-in-out infinite' }}>+</button>
+        </div>,
+        document.body
       )}
 
       {/* Add/Edit Modal */}

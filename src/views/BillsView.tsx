@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { data, type Bill, type Notification } from '@/lib/data';
 import ModalSheet from '@/components/ModalSheet';
+import { createPortal } from 'react-dom';
 
 const calculateNextDueDate = (dateStr: string, months: number): string => {
   const d = new Date(dateStr + 'T12:00:00');
@@ -231,9 +232,12 @@ export default function BillsView() {
         </div>
       )}
 
-      {tab === 'upcoming' && (
-        <button onClick={openAdd} className="fixed bottom-[100px] right-6 w-12 h-12 rounded-full text-2xl font-light border-none flex items-center justify-center z-40 shadow-lg"
-          style={{ background: 'var(--gradient-primary)', color: 'hsl(var(--primary-foreground))' }}>+</button>
+      {tab === 'upcoming' && createPortal(
+        <div className="fixed bottom-[85px] left-1/2 -translate-x-1/2 w-full max-w-[430px] flex justify-end px-5 pointer-events-none z-[100]">
+          <button onClick={openAdd} className="w-14 h-14 rounded-full text-3xl font-light border-none flex items-center justify-center transition-all hover:scale-110 pointer-events-auto shadow-lg"
+            style={{ background: 'var(--gradient-primary)', color: 'hsl(var(--primary-foreground))', animation: 'fabPulse 3s ease-in-out infinite' }}>+</button>
+        </div>,
+        document.body
       )}
 
       {/* Add/Edit Modal */}
