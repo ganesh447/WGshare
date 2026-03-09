@@ -8,6 +8,7 @@ const NOTIF_ICONS: Record<string, string> = {
   purchase_recorded: '🛒',
   bill_paid: '✅',
   task_reminder: '🧹',
+  settlement: '💸',
 };
 
 export default function NotificationDrawer({ onClose }: { onClose: () => void }) {

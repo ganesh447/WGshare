@@ -1,7 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import { data, type Bill } from '@/lib/data';
+import { data, type Bill, type Notification } from '@/lib/data';
 import ModalSheet from '@/components/ModalSheet';
+
+const calculateNextDueDate = (dateStr: string, months: number): string => {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().split('T')[0];
+};
 
 export default function BillsView() {
   const { bills, flatmates, updateData, toast } = useApp();
@@ -15,15 +21,38 @@ export default function BillsView() {
   const [formAmount, setFormAmount] = useState('');
   const [formDueDate, setFormDueDate] = useState('');
   const [formPeriod, setFormPeriod] = useState('');
+  const [formIsRecurring, setFormIsRecurring] = useState(false);
+  const [formRecurringMonths, setFormRecurringMonths] = useState(1);
   const [payerId, setPayerId] = useState('');
 
   const activeFm = flatmates.filter(f => f.active);
   const calcSplit = (amt: number) => parseFloat((amt / (activeFm.length || 1)).toFixed(2));
-
-  // Refresh overdue
   const today = new Date().toISOString().split('T')[0];
-  const allBills = bills.map(b => b.status === 'upcoming' && b.dueDate < today ? { ...b, status: 'overdue' } : b);
 
+  // Persist overdue status and fire bill_overdue notifications
+  useEffect(() => {
+    const overdueOnes = bills.filter(b => b.status === 'upcoming' && b.dueDate < today);
+    if (overdueOnes.length === 0) return;
+
+    const updated = bills.map(b =>
+      b.status === 'upcoming' && b.dueDate < today ? { ...b, status: 'overdue' } : b
+    );
+    updateData(data.keys.bills, updated);
+
+    const notifs = data.get<Notification[]>(data.keys.notifications) || [];
+    overdueOnes.forEach(b => {
+      notifs.unshift({
+        id: data.generateId(),
+        type: 'bill_overdue',
+        message: `${b.name} is overdue (due ${data.formatDateShort(b.dueDate)})`,
+        timestamp: new Date().toISOString(),
+        read: false,
+      });
+    });
+    updateData(data.keys.notifications, notifs);
+  }, [bills]);
+
+  const allBills = bills.map(b => b.status === 'upcoming' && b.dueDate < today ? { ...b, status: 'overdue' } : b);
   const items = tab === 'upcoming'
     ? allBills.filter(b => b.status === 'upcoming' || b.status === 'overdue').sort((a, b) => a.dueDate.localeCompare(b.dueDate))
     : allBills.filter(b => b.status === 'paid').sort((a, b) => (b.paymentDate || '').localeCompare(a.paymentDate || ''));
@@ -31,12 +60,15 @@ export default function BillsView() {
   const openAdd = () => {
     setEditBill(null);
     setFormName(''); setFormAmount(''); setFormDueDate(''); setFormPeriod('');
+    setFormIsRecurring(false); setFormRecurringMonths(1);
     setShowModal(true);
   };
 
   const openEdit = (bill: Bill) => {
     setEditBill(bill);
     setFormName(bill.name); setFormAmount(String(bill.amount)); setFormDueDate(bill.dueDate); setFormPeriod(bill.billingPeriod);
+    setFormIsRecurring(bill.isRecurring || false);
+    setFormRecurringMonths(bill.recurringMonths || 1);
     setShowModal(true);
   };
 
@@ -57,6 +89,8 @@ export default function BillsView() {
       paidBy: editBill?.paidBy || null,
       paymentDate: editBill?.paymentDate || null,
       createdAt: editBill?.createdAt || new Date().toISOString(),
+      isRecurring: formIsRecurring,
+      recurringMonths: formIsRecurring ? formRecurringMonths : undefined,
     };
 
     const all = [...bills];
@@ -88,16 +122,33 @@ export default function BillsView() {
     const bill = all[idx];
     const now = new Date().toISOString();
     const activeOthers = activeFm.filter(f => f.id !== payerId).map(f => f.id);
+    const payer = flatmates.find(f => f.id === payerId);
 
     all[idx] = { ...bill, status: 'paid', paidBy: payerId, paymentDate: now };
+
+    // Auto-generate next bill if recurring
+    if (bill.isRecurring && bill.recurringMonths) {
+      const nextDue = calculateNextDueDate(bill.dueDate, bill.recurringMonths);
+      all.push({
+        ...bill,
+        id: data.generateId(),
+        status: 'upcoming',
+        paidBy: null,
+        paymentDate: null,
+        dueDate: nextDue,
+      });
+    }
     updateData(data.keys.bills, all);
 
     const txs = data.get<any[]>(data.keys.transactions) || [];
     txs.push({ id: data.generateId(), type: 'bill_payment', from: payerId, to: activeOthers, amount: bill.amount, perPersonAmount: bill.splitAmount, date: now, reference: `${bill.name} - ${bill.billingPeriod || bill.dueDate}`, billId: bill.id });
     updateData(data.keys.transactions, txs);
 
+    const notifs = data.get<Notification[]>(data.keys.notifications) || [];
+    notifs.unshift({ id: data.generateId(), type: 'bill_paid', message: `${bill.name} marked as paid by ${payer?.name}`, timestamp: now, read: false });
+    updateData(data.keys.notifications, notifs);
+
     setShowPayModal(false);
-    const payer = flatmates.find(f => f.id === payerId);
     toast(`${bill.name} marked as paid by ${payer?.name}!`, 'success');
   };
 
@@ -128,15 +179,21 @@ export default function BillsView() {
             return (
               <div key={bill.id} className={`glass-card rounded-xl p-4 animate-fade-in-up ${isOverdue ? 'border-destructive/30' : ''}`}>
                 <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-bold text-lg">{bill.name}</p>
+                  <div className="flex-1 min-w-0 pr-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-lg">{bill.name}</p>
+                      {bill.isRecurring && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary">
+                          🔄 {bill.recurringMonths === 1 ? 'Monthly' : `Every ${bill.recurringMonths}m`}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground mt-1">{bill.billingPeriod}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     <p className="font-extrabold text-lg">{data.formatCurrency(bill.amount)}</p>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase mt-1 ${
-                      isOverdue ? 'bg-destructive/10 text-destructive' : isPaid ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'
-                    }`}>{isOverdue ? 'Overdue' : isPaid ? 'Paid' : 'Upcoming'}</span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase mt-1 ${isOverdue ? 'bg-destructive/10 text-destructive' : isPaid ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'
+                      }`}>{isOverdue ? 'Overdue' : isPaid ? 'Paid' : 'Upcoming'}</span>
                   </div>
                 </div>
 
@@ -174,8 +231,10 @@ export default function BillsView() {
         </div>
       )}
 
-      <button onClick={openAdd} className="fixed bottom-[88px] right-[calc(50%-195px)] w-14 h-14 rounded-full text-3xl font-light border-none flex items-center justify-center z-50"
-        style={{ background: 'var(--gradient-primary)', color: 'hsl(var(--primary-foreground))', animation: 'fabPulse 3s ease-in-out infinite' }}>+</button>
+      {tab === 'upcoming' && (
+        <button onClick={openAdd} className="fixed bottom-[100px] right-6 w-12 h-12 rounded-full text-2xl font-light border-none flex items-center justify-center z-40 shadow-lg"
+          style={{ background: 'var(--gradient-primary)', color: 'hsl(var(--primary-foreground))' }}>+</button>
+      )}
 
       {/* Add/Edit Modal */}
       <ModalSheet open={showModal} onClose={() => setShowModal(false)} title={editBill ? 'Edit Bill' : 'Add Bill'}>
@@ -193,6 +252,38 @@ export default function BillsView() {
         <FormField label="Billing Period">
           <input value={formPeriod} onChange={e => setFormPeriod(e.target.value)} className="glass-input w-full rounded-lg px-3.5 py-3 text-foreground" placeholder="e.g. March 2026" />
         </FormField>
+
+        {/* Recurring toggle */}
+        <div className="glass-surface rounded-lg px-4 py-3 flex justify-between items-center">
+          <div>
+            <p className="text-sm font-semibold">Recurring bill</p>
+            <p className="text-xs text-muted-foreground">Auto-creates next bill when paid</p>
+          </div>
+          <button type="button" onClick={() => setFormIsRecurring(r => !r)}
+            className={`w-12 h-6 rounded-full transition-all flex items-center px-1 ${formIsRecurring ? 'bg-primary' : 'bg-secondary border border-border'}`}>
+            <span className={`w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-200 ${formIsRecurring ? 'translate-x-6' : 'translate-x-0'}`} />
+          </button>
+        </div>
+
+        {formIsRecurring && (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Repeats every — <span className="text-primary normal-case font-bold">
+                {formRecurringMonths === 1 ? '1 month' : `${formRecurringMonths} months`}
+              </span>
+            </p>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                <button key={m} type="button" onClick={() => setFormRecurringMonths(m)}
+                  className={`flex-shrink-0 w-10 h-10 rounded-full text-sm font-bold transition-all ${formRecurringMonths === m ? 'bg-primary text-primary-foreground' : 'glass-card text-muted-foreground'
+                    }`}>
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="glass-surface rounded-lg px-4 py-3 flex justify-between items-center">
           <span className="text-sm text-muted-foreground">Split per person</span>
           <span className="font-bold text-primary">{formAmount && parseFloat(formAmount) > 0 ? `${data.formatCurrency(calcSplit(parseFloat(formAmount)))} per person` : '—'}</span>

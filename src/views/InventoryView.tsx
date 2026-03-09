@@ -4,10 +4,10 @@ import { data, CATEGORIES, UNITS, type InventoryItem } from '@/lib/data';
 import ModalSheet from '@/components/ModalSheet';
 
 export default function InventoryView() {
-  const { inventory, flatmates, updateData, toast, refresh } = useApp();
+  const { inventory, flatmates, currentUser, updateData, toast, refresh } = useApp();
   const [tab, setTab] = useState<'inventory' | 'shopping'>('inventory');
   const [category, setCategory] = useState('all');
-  const [statusFilter, setStatusFilter] = useState<'instock' | 'depleted'>('instock');
+
   const [showModal, setShowModal] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [editItem, setEditItem] = useState<InventoryItem | null>(null);
@@ -38,10 +38,8 @@ export default function InventoryView() {
   const shoppingItems = allItems.filter(i => i.status === 'depleted' || i.status === 'needed');
 
   let displayItems = tab === 'inventory' ? inventoryItems : shoppingItems;
-  if (tab === 'inventory') {
-    if (category !== 'all') displayItems = displayItems.filter(i => i.category === category);
-    if (statusFilter === 'instock') displayItems = displayItems.filter(i => i.status === 'available');
-    else displayItems = displayItems.filter(i => i.status === 'depleted');
+  if (tab === 'inventory' && category !== 'all') {
+    displayItems = displayItems.filter(i => i.category === category);
   }
 
   const openAdd = () => {
@@ -96,14 +94,14 @@ export default function InventoryView() {
 
   const openPurchase = (item: InventoryItem) => {
     setPurchaseItem(item);
-    setPurchBuyer(flatmates[0]?.id || '');
+    setPurchBuyer(currentUser?.id || '');
     setPurchQty('1');
     setPurchCost(String(item.lastPurchaseCost || ''));
     setShowPurchaseModal(true);
   };
 
   const confirmPurchase = () => {
-    if (!purchaseItem || !purchBuyer) { toast('Select who bought it', 'error'); return; }
+    if (!purchaseItem || !purchBuyer) { toast('Could not identify buyer', 'error'); return; }
     const cost = parseFloat(purchCost) || 0;
     const newQty = parseFloat(purchQty) || 1;
     const now = new Date().toISOString();
@@ -121,6 +119,15 @@ export default function InventoryView() {
       purchaseHistory: [...(all[idx].purchaseHistory || []), { purchasedBy: purchBuyer, date: now, cost, quantity: newQty }],
     };
     updateData(data.keys.inventory, all);
+
+    // Notifications
+    const buyerName = flatmates.find(f => f.id === purchBuyer)?.name || 'Someone';
+    const notifs = data.get<any[]>(data.keys.notifications) || [];
+    notifs.unshift({ id: data.generateId(), type: 'purchase_recorded', message: `${purchaseItem.name} purchased by ${buyerName}`, timestamp: now, read: false });
+    if (all[idx].quantity < all[idx].minThreshold) {
+      notifs.unshift({ id: data.generateId(), type: 'inventory_depletion', message: `${purchaseItem.name} is running low (${all[idx].quantity} ${all[idx].unit} left)`, timestamp: now, read: false });
+    }
+    updateData(data.keys.notifications, notifs);
 
     if (cost > 0) {
       const activeFm = flatmates.filter(f => f.active);
@@ -164,10 +171,6 @@ export default function InventoryView() {
                 <span>{c.label}</span>
               </button>
             ))}
-          </div>
-          <div className="flex gap-2 px-4 pb-3">
-            <button onClick={() => setStatusFilter('instock')} className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${statusFilter === 'instock' ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border bg-card text-muted-foreground'}`}>In Stock</button>
-            <button onClick={() => setStatusFilter('depleted')} className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${statusFilter === 'depleted' ? 'border-destructive/40 bg-destructive/10 text-destructive' : 'border-border bg-card text-muted-foreground'}`}>Depleted</button>
           </div>
         </>
       )}
@@ -234,8 +237,10 @@ export default function InventoryView() {
       )}
 
       {/* FAB */}
-      <button onClick={openAdd} className="fixed bottom-[88px] right-[calc(50%-195px)] w-14 h-14 rounded-full text-3xl font-light border-none flex items-center justify-center z-50 transition-all hover:scale-110"
-        style={{ background: 'var(--gradient-primary)', color: 'hsl(var(--primary-foreground))', animation: 'fabPulse 3s ease-in-out infinite' }}>+</button>
+      {tab === 'shopping' && (
+        <button onClick={openAdd} className="fixed bottom-[100px] right-6 w-12 h-12 rounded-full text-2xl font-light border-none flex items-center justify-center z-40 transition-all shadow-lg hover:scale-110"
+          style={{ background: 'var(--gradient-primary)', color: 'hsl(var(--primary-foreground))' }}>+</button>
+      )}
 
       {/* Add/Edit Modal */}
       <ModalSheet open={showModal} onClose={() => setShowModal(false)} title={editItem ? 'Edit Item' : 'Add Item'}>
@@ -282,11 +287,10 @@ export default function InventoryView() {
           <p className="text-xs text-muted-foreground">Item</p>
           <p className="text-lg font-bold mt-0.5">{purchaseItem?.name}</p>
         </div>
-        <FormField label="Bought by">
-          <select value={purchBuyer} onChange={e => setPurchBuyer(e.target.value)} className="glass-input w-full rounded-lg px-3.5 py-3 text-foreground">
-            {activeFm.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-          </select>
-        </FormField>
+        <div className="glass-surface rounded-lg px-4 py-3 flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Bought by</span>
+          <span className="font-semibold text-sm">{currentUser?.name}</span>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Qty Added">
             <input type="number" value={purchQty} onChange={e => setPurchQty(e.target.value)} className="glass-input w-full rounded-lg px-3.5 py-3 text-foreground" min="1" />

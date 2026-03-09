@@ -52,6 +52,8 @@ export type Bill = {
   paidBy: string | null;
   paymentDate: string | null;
   createdAt: string;
+  isRecurring?: boolean;
+  recurringMonths?: number;
 };
 
 export type CleanTask = {
